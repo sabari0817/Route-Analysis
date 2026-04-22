@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --accent-primary: #2563eb;
+            --accent-hover: #1d4ed8;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            background: var(--accent-primary);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        button:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        .loader {
+            display: none;
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-bottom-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-container {
+            display: none;
+            width: 100%;
+            max-width: 1000px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .data-list {
+            list-style: none;
+        }
+
+        .data-list li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .data-list li span.label {
+            color: var(--text-secondary);
+        }
+        
+        .data-list li span.value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .suggestion-card {
+            grid-column: 1 / -1;
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
+        
+        .suggestion-card h3 {
+            color: #0369a1;
+            border-bottom-color: #bae6fd;
+        }
+
+        .suggestion-card p {
+            color: #0c4a6e;
+            line-height: 1.5;
+        }
+
+        .error-msg {
+            color: #dc2626;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: none;
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: #e2e8f0;
+            color: #475569;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Route Analysis</h1>
+        <p>Demographic & transport route analysis</p>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="routeInput" placeholder="Enter route (e.g., Delhi to Agra)" />
+        <button id="searchBtn">Analyze</button>
+    </div>
+
+    <div class="loader" id="loader"></div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="results-container" id="resultsContainer">
+        <!-- Results will be injected here via JavaScript -->
+    </div>
+
+    <script>
+        document.getElementById('searchBtn').addEventListener('click', analyzeRoute);
+        document.getElementById('routeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') analyzeRoute();
+        });
+
+        async function analyzeRoute() {
+            const query = document.getElementById('routeInput').value.trim();
+            if (!query) return;
+
+            // UI State updates
+            const container = document.getElementById('resultsContainer');
+            const loader = document.getElementById('loader');
+            const errorMsg = document.getElementById('errorMsg');
+            const searchBtn = document.getElementById('searchBtn');
+
+            container.style.display = 'none';
+            container.innerHTML = '';
+            errorMsg.style.display = 'none';
+            loader.style.display = 'block';
+            searchBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/testing/?route=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                renderResults(result.data);
+
+            } catch (err) {
+                errorMsg.textContent = "Error: " + err.message;
+                errorMsg.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                searchBtn.disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            if (!data) return;
+            const container = document.getElementById('resultsContainer');
+
+            // 1. Suggestion Summary Card (Full width)
+            if (data.suggestion) {
+                container.innerHTML += `
+                    <div class="card suggestion-card">
+                        <h3>Route Insights</h3>
+                        <p>${data.suggestion}</p>
+                    </div>
+                `;
+            }
+
+            // 2. City Demographics
+            if (data.cities && data.cities.length > 0) {
+                data.cities.forEach(city => {
+                    let segBadges = '';
+                    if (city.segmentation) {
+                        for (const [key, value] of Object.entries(city.segmentation)) {
+                            if (value) segBadges += `<span class="badge">${key}</span>`;
+                        }
+                    }
+
+                    container.innerHTML += `
+                        <div class="card">
+                            <h3>City: ${city.name} ${segBadges}</h3>
+                            <ul class="data-list">
+                                <li><span class="label">Population:</span> <span class="value">${Number(city.population).toLocaleString()}</span></li>
+                                <li><span class="label">Yearly Visitors:</span> <span class="value">${Number(city.visitors?.yearly || 0).toLocaleString()}</span></li>
+                                <li><span class="label">Primary Industry:</span> <span class="value" style="text-align:right; max-width:60%;">${city.industry || 'N/A'}</span></li>
+                                <li><span class="label">Tourism:</span> <span class="value" style="text-align:right; max-width:60%;">${city.tourism || 'N/A'}</span></li>
+                            </ul>
+                        </div>
+                    `;
+                });
+            }
+
+            // 3. Distance Metrics
+            if (data.distances && data.distances.length > 0) {
+                let distHTML = `<ul class="data-list">`;
+                data.distances.forEach(d => {
+                    distHTML += `<li><span class="label">${d.from} ➔ ${d.to}:</span> <span class="value">${d.km} km</span></li>`;
+                });
+                distHTML += `</ul>`;
+
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>Distances</h3>
+                        ${distHTML}
+                    </div>
+                `;
+            }
+
+            // 4. Modal Transport Stats
+            if (data.transport) {
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>Transport Share</h3>
+                        <ul class="data-list">
+                            <li><span class="label">Bus Share:</span> <span class="value">${data.transport.bus}%</span></li>
+                            <li><span class="label">Train Share:</span> <span class="value">${data.transport.train}%</span></li>
+                            <li><span class="label">Private:</span> <span class="value">${data.transport.private}%</span></li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // 5. Detailed Transport
+            if (data.transport_detail && data.transport_detail.length > 0) {
+                let transHTML = `<ul class="data-list">`;
+                data.transport_detail.forEach(t => {
+                    transHTML += `<li><span class="label">${t.mode} (${t.from}➔${t.to}):</span> <span class="value" style="text-align:right;">${t.frequency}</span></li>`;
+                });
+                transHTML += `</ul>`;
+
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>Transport Frequency</h3>
+                        ${transHTML}
+                    </div>
+                `;
+            }
+
+            container.style.display = 'grid';
+        }
+    </script>
+</body>
+</html>
