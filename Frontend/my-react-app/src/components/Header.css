@@ -1,0 +1,137 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.route-inputs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  flex: 1;
+  max-width: 600px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.route-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+.swap-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.swap-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.analyze-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--accent-blue);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+}
+
+.analyze-btn:hover {
+  background-color: var(--accent-blue-hover);
+  transform: translateY(-1px);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  position: relative;
+}
+
+.icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  background-color: var(--danger-red);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-main);
+}
+
+.header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.header-avatar:hover {
+  border-color: var(--accent-blue);
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
