@@ -2,11 +2,11 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from openai import OpenAI
+# from .models import 
+import os
 import json
 
 from .models import *
-
-import os
 
 # ✅ NVIDIA Client (Secured)
 client = OpenAI(
@@ -14,135 +14,172 @@ client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1"
 )
 
-
-# ✅ PROMPT FUNCTION (VERY IMPORTANT)
+# ✅ PROMPT FUNCTION 1: Generate Raw Text
 def build_prompt(route_name):
-    return f"""
-You are a professional transportation and market analysis data engine.
+    return f"""Act as a transportation, tourism, and route analysis expert.
 
-STRICT INSTRUCTIONS:
-- Return ONLY valid JSON (no text, no explanation, no markdown)
-- All values must be LOGICALLY CORRECT and REALISTIC
-- Do NOT guess randomly
-- Use approximate real-world Indian data based on known trends
+Your task is to generate a COMPLETE and DETAILED route analysis.
 
-CRITICAL VALIDATION RULES:
-1. Population:
-   - Must be realistic (small towns: 40k–100k, cities: 1L–50L)
-   - Do NOT give extremely low or extremely high values
+STRICT RULES:
+- You MUST follow EXACT numbering from 1 to 10
+- Do NOT skip any section
+- Do NOT summarize
+- Do NOT give short answers
+- Output must be detailed, structured, and professional
+- Use bullet points and tables where needed
+- Output must be READY FOR COPY-PASTE (no explanation before or after)
+- If data is unknown, give realistic Indian estimates
 
-2. Visitors:
-   - Yearly visitors must be >= daily visitors × 300
-   - Pilgrimage cities can have higher visitors
-   - Avoid unrealistic huge numbers
+FORMAT TO FOLLOW EXACTLY:
 
-3. Transport Share:
-   - bus + train + private MUST equal EXACTLY 100
-   - No value should exceed 80 individually
-   - Example: 60, 25, 15
+ROUTE NAME: {route_name}
 
-4. Distance:
-   - Must be realistic based on Indian geography
-   - Range: 50 km to 1500 km
+1. Population in that area?
+(Give approximate population with range for each major city and total corridor population)
 
-5. Transport Frequency:
-   - Bus: every 15 mins to 3 hours
-   - Train: every 2 to 12 hours
+2. Potential of the Area like Education, Temples, Tourist attraction, Companies?
+(Clearly explain strengths like tourism, pilgrimage, industry, education)
 
-6. Segmentation:
-   - Set flags logically (pilgrimage = true for temple cities)
+3. Area Segmentation with Place Details
+(List zones like origin, industrial, tourist, entry, destination)
 
-TASK:
-Analyze this route:
-{route_name}
+4. Total Visitor Count with Place Name (Yearly & Daily)
+(Give yearly + daily normal + peak)
 
-OUTPUT FORMAT (STRICT — DO NOT CHANGE):
+5. Top Visitor Count (State-wise with Top 5 Cities and Count)
+(Give percentage + top 5 cities per state)
+
+6. Distance Between Two Cities (in KM)
+(Create a clean table of distances)
+
+7. Mode of Transport Used
+(Give percentage split)
+
+8. Luggage and Parcel Services
+(List practical logistics movement)
+
+9. Specific Bus and Train Details
+(Show city-wise buses/day and trains/day clearly)
+
+10. Suggested Routes
+(Give 2–3 optimized routes with travel time)
+
+IMPORTANT:
+- DO NOT return summary cards
+- DO NOT return UI format
+- DO NOT shorten content
+- DO NOT miss any section
+- Each section must be clearly separated
+
+Now generate for:
+{route_name}"""
+
+
+# ✅ PROMPT FUNCTION 2: Transform to JSON
+def build_json_prompt(raw_text):
+    return f"""You are a data transformation engine.
+
+Convert the following unstructured route analysis data into STRICT VALID JSON.
+
+Rules:
+- Return ONLY JSON (no explanation, no text before/after)
+- Use proper JSON format (double quotes, no trailing commas)
+- Normalize ranges by taking mid-values (example: "10-15 million" → 12500000)
+- Convert percentages to integers (example: "60% - 70%" → 65)
+- Ensure all numeric fields are numbers (not strings)
+- Keep city names consistent
+- If multiple values exist, choose the most realistic average
+
+Output JSON structure:
 
 {{
-  "cities": [
+  "population": [
+    {{"city": "", "population": 0}}
+  ],
+  "potential": [
     {{
-      "name": "CityName",
-      "population": 100000,
-      "education": "short detail",
-      "temples": "short detail",
-      "tourism": "short detail",
-      "industry": "short detail",
-      "segmentation": {{
-        "urban": true,
-        "industrial": false,
-        "pilgrimage": true,
-        "transit": true
-      }},
-      "visitors": {{
-        "yearly": 1000000,
-        "daily": 5000,
-        "festival": "festival name"
-      }}
+      "city": "",
+      "education": "",
+      "temples": "",
+      "tourism": "",
+      "industry": ""
     }}
   ],
-
-  "distances": [
+  "segmentation": [
     {{
-      "from": "CityName",
-      "to": "CityName",
-      "km": 100
+      "city": "",
+      "urban": true,
+      "industrial": true,
+      "pilgrimage": false,
+      "transit": true
     }}
   ],
-
-  "transport": {{
-    "bus": 60,
-    "train": 25,
-    "private": 15
+  "visitors": [
+    {{
+      "city": "",
+      "yearly": 0,
+      "daily": 0,
+      "festival": ""
+    }}
+  ],
+  "distance": [
+    {{"from": "", "to": "", "km": 0}}
+  ],
+  "transport_pattern": {{
+    "bus": 0,
+    "train": 0,
+    "private": 0,
+    "peak_days": "",
+    "rush_pattern": ""
   }},
-
-  "transport_detail": [
+  "transport_details": [
     {{
-      "from": "CityName",
-      "to": "CityName",
-      "mode": "Bus",
-      "frequency": "Every 30 mins"
+      "from": "",
+      "to": "",
+      "mode": "",
+      "frequency": ""
     }}
   ],
-
   "top_visitors": [
     {{
-      "state": "StateName",
-      "city": "CityName",
-      "count": 5000
+      "state": "",
+      "city": "",
+      "count": 0
     }}
   ],
-
-  "parcel_service": [
-    {{
-      "service_name": "Service Name",
-      "coverage": "Coverage Details"
-    }}
-  ],
-
-  "suggestion": "Final route analysis summary"
+  "suggested_routes": [
+    {{"description": ""}}
+  ]
 }}
+
+Now convert this data:
+
+{raw_text}
 """
 
 
 # ✅ LLM CALL
-def call_llm(prompt):
-    response = client.chat.completions.create(
-        model="meta/llama-3.1-70b-instruct",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        response_format={"type": "json_object"}
-    )
+def call_llm(prompt, is_json=False):
+    params = {
+        "model": "meta/llama-3.1-70b-instruct",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
+    }
+    if is_json:
+        params["response_format"] = {"type": "json_object"}
+        
+    response = client.chat.completions.create(**params)
     return response.choices[0].message.content
 
 
 # ✅ CLEAN JSON
 def clean_json(response):
     response = response.strip()
-
+    if "```json" in response:
+        response = response.split("```json")[1]
     if "```" in response:
-        response = response.split("```")[1]
-
-    return json.loads(response)
+        response = response.split("```")[0]
+    return json.loads(response.strip())
 
 
 # ✅ MAIN VIEWS
@@ -159,136 +196,140 @@ def full_analysis_view(request):
     try:
         route, _ = Route.objects.get_or_create(name=route_name)
 
-        prompt = build_prompt(route_name)
-
-        # ✅ Retry (important)
+        # STEP 1: Generate Raw Text
+        prompt1 = build_prompt(route_name)
+        raw_text = ""
         for i in range(3):
             try:
-                raw = call_llm(prompt)
-                data = clean_json(raw)
+                raw_text = call_llm(prompt1)
                 break
             except Exception as e:
                 if i == 2:
-                    return JsonResponse({"error": f"LLM failed: {str(e)}"})
+                    return JsonResponse({"error": f"LLM Step 1 failed: {str(e)}"})
 
-        # ✅ Safety defaults
-        cities_data = data.get("cities", [])
-        distances_data = data.get("distances", [])
-        transport_data = data.get("transport", {})
-        transport_detail_data = data.get("transport_detail", [])
-        top_visitors_data = data.get("top_visitors", [])
-        parcel_service_data = data.get("parcel_service", [])
-        suggestion_text = data.get("suggestion", "")
+        # STEP 2: Transform to JSON
+        prompt2 = build_json_prompt(raw_text)
+        data = {}
+        for i in range(3):
+            try:
+                raw_json = call_llm(prompt2, is_json=True)
+                data = clean_json(raw_json)
+                break
+            except Exception as e:
+                if i == 2:
+                    # Fallback gracefully if JSON parsing fails, still return the raw text
+                    data = {}
 
-        city_map = {}
+        # STEP 3: DB Population
+        if data:
+            city_map = {}
 
-        # ✅ SAVE CITY DATA
-        for c in cities_data:
-            city, _ = City.objects.get_or_create(
-                name=c.get("name"),
-                route=route
-            )
-            city_map[c.get("name")] = city
+            # Populate Cities & Population
+            for p in data.get("population", []):
+                city_name = p.get("city", "")
+                if city_name:
+                    city, _ = City.objects.get_or_create(name=city_name, route=route)
+                    city_map[city_name] = city
+                    Population.objects.update_or_create(
+                        city=city,
+                        defaults={"population": p.get("population", 0)}
+                    )
 
-            Population.objects.update_or_create(
-                city=city,
-                defaults={"population": c.get("population", 0)}
-            )
+            # Potential
+            for p in data.get("potential", []):
+                if p.get("city") in city_map:
+                    Potential.objects.update_or_create(
+                        city=city_map[p["city"]],
+                        defaults={
+                            "education": p.get("education", ""),
+                            "temples": p.get("temples", ""),
+                            "tourism": p.get("tourism", ""),
+                            "industry": p.get("industry", ""),
+                        }
+                    )
 
-            Potential.objects.update_or_create(
-                city=city,
-                defaults={
-                    "education": c.get("education", ""),
-                    "temples": c.get("temples", ""),
-                    "tourism": c.get("tourism", ""),
-                    "industry": c.get("industry", ""),
-                }
-            )
+            # Segmentation
+            for s in data.get("segmentation", []):
+                if s.get("city") in city_map:
+                    Segmentation.objects.update_or_create(
+                        city=city_map[s["city"]],
+                        defaults={
+                            "urban": s.get("urban", False),
+                            "industrial": s.get("industrial", False),
+                            "pilgrimage": s.get("pilgrimage", False),
+                            "transit": s.get("transit", False),
+                        }
+                    )
 
-            seg = c.get("segmentation", {})
+            # Visitors
+            for v in data.get("visitors", []):
+                if v.get("city") in city_map:
+                    Visitors.objects.update_or_create(
+                        city=city_map[v["city"]],
+                        defaults={
+                            "yearly": v.get("yearly", 0),
+                            "daily": v.get("daily", 0),
+                            "festival": v.get("festival", "")
+                        }
+                    )
 
-            Segmentation.objects.update_or_create(
-                city=city,
-                defaults={
-                    "urban": seg.get("urban", False),
-                    "industrial": seg.get("industrial", False),
-                    "pilgrimage": seg.get("pilgrimage", False),
-                    "transit": seg.get("transit", False),
-                }
-            )
+            # Distance
+            for d in data.get("distance", []):
+                if d.get("from") in city_map and d.get("to") in city_map:
+                    Distance.objects.update_or_create(
+                        route=route,
+                        from_city=city_map[d["from"]],
+                        to_city=city_map[d["to"]],
+                        defaults={"km": d.get("km", 0)}
+                    )
 
-            vis = c.get("visitors", {})
-
-            Visitors.objects.update_or_create(
-                city=city,
-                defaults={
-                    "yearly": vis.get("yearly", 0),
-                    "daily": vis.get("daily", 0),
-                    "festival": vis.get("festival")
-                }
-            )
-
-        # ✅ DISTANCES
-        for d in distances_data:
-            if d.get("from") in city_map and d.get("to") in city_map:
-                Distance.objects.update_or_create(
-                    route=route,
-                    from_city=city_map[d["from"]],
-                    to_city=city_map[d["to"]],
-                    defaults={"km": d.get("km", 0)}
-                )
-
-        # ✅ TRANSPORT
-        Transport.objects.update_or_create(
-            route=route,
-            defaults={
-                "bus": transport_data.get("bus", 0),
-                "train": transport_data.get("train", 0),
-                "private": transport_data.get("private", 0)
-            }
-        )
-
-        # ✅ TRANSPORT DETAIL
-        for td in transport_detail_data:
-            if td.get("from") in city_map and td.get("to") in city_map:
-                TransportDetail.objects.update_or_create(
-                    route=route,
-                    from_city=city_map[td["from"]],
-                    to_city=city_map[td["to"]],
-                    mode=td.get("mode", "Bus"),
-                    defaults={"frequency": td.get("frequency", "")}
-                )
-
-        # ✅ SUGGESTION
-        SuggestedRoute.objects.update_or_create(
-            route=route,
-            defaults={"description": suggestion_text}
-        )
-
-        # ✅ TOP VISITORS
-        for tv in top_visitors_data:
-            if tv.get("city") in city_map:
-                TopVisitors.objects.update_or_create(
-                    route=route,
-                    city=city_map[tv["city"]],
-                    defaults={
-                        "state": tv.get("state", ""),
-                        "count": tv.get("count", 0)
-                    }
-                )
-
-        # ✅ PARCEL SERVICE
-        for ps in parcel_service_data:
-            ParcelService.objects.update_or_create(
+            # Transport
+            tp = data.get("transport_pattern", {})
+            Transport.objects.update_or_create(
                 route=route,
-                service_name=ps.get("service_name", ""),
-                defaults={"coverage": ps.get("coverage", "")}
+                defaults={
+                    "bus": tp.get("bus", 0),
+                    "train": tp.get("train", 0),
+                    "private": tp.get("private", 0)
+                }
             )
 
+            # Transport Details
+            for td in data.get("transport_details", []):
+                if td.get("from") in city_map and td.get("to") in city_map:
+                    TransportDetail.objects.update_or_create(
+                        route=route,
+                        from_city=city_map[td["from"]],
+                        to_city=city_map[td["to"]],
+                        mode=td.get("mode", "Bus"),
+                        defaults={"frequency": td.get("frequency", "")}
+                    )
+
+            # Top Visitors
+            for tv in data.get("top_visitors", []):
+                if tv.get("city") in city_map:
+                    TopVisitors.objects.update_or_create(
+                        route=route,
+                        city=city_map[tv["city"]],
+                        defaults={
+                            "state": tv.get("state", ""),
+                            "count": tv.get("count", 0)
+                        }
+                    )
+
+            # Suggested Routes
+            sr_text = "\\n".join([sr.get("description", "") for sr in data.get("suggested_routes", [])])
+            SuggestedRoute.objects.update_or_create(
+                route=route,
+                defaults={"description": sr_text}
+            )
+
+        # Return both the raw text (for the UI) and the structured JSON data
         return JsonResponse({
             "message": "Full analysis completed successfully",
             "route": route.name,
-            "data": data
+            "data": raw_text,
+            "json_data": data
         })
 
     except Exception as e:
