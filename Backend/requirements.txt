@@ -1,0 +1,8 @@
+Django>=5.2
+python-dotenv>=1.0.0
+openai>=1.0.0
+mysqlclient>=2.2.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+requests
